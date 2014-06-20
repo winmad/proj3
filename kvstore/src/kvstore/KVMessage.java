@@ -137,6 +137,26 @@ public class KVMessage implements Serializable {
 	        	if (key == null || key.length() == 0)
 	        		throw new KVException(KVConstants.ERROR_INVALID_FORMAT);
 	        }
+	        else if (msgType.equals(KVConstants.READY)) {
+	        }
+	        else if (msgType.equals(KVConstants.ABORT)) {
+	        	if (msgNode.getLength() > 0) {
+	        		message = msgNode.item(0).getTextContent();
+	        		if (message == null)
+	        			throw new KVException(KVConstants.ERROR_INVALID_FORMAT);
+	        	}
+	        }
+	        else if (msgType.equals(KVConstants.COMMIT)) {
+	        }
+	        else if (msgType.equals(KVConstants.ACK)) {
+	        }
+	        else if (msgType.equals(KVConstants.REGISTER)) {
+	        	if (msgNode.getLength() > 0)
+	        		message = msgNode.item(0).getTextContent();
+	        	if (message == null || !message.contains("@") ||
+	        		!message.contains(":"))
+	        		throw new KVException(KVConstants.ERROR_INVALID_FORMAT);
+	        }
 	        else if (msgType.equals(KVConstants.RESP)) {
 	        	if (msgNode.getLength() > 0)
 	        		message = msgNode.item(0).getTextContent();
@@ -220,12 +240,9 @@ public class KVMessage implements Serializable {
         		kvm.appendChild(valueElement);
         	}
         }
-        else {
-        	if (!msgType.equals(KVConstants.PUT_REQ) &&
-        		!msgType.equals(KVConstants.GET_REQ) &&
-        		!msgType.equals(KVConstants.DEL_REQ))
-        		throw new KVException(KVConstants.ERROR_INVALID_FORMAT);
-        	
+        else if (msgType.equals(KVConstants.PUT_REQ) ||
+        		msgType.equals(KVConstants.GET_REQ) ||
+        		msgType.equals(KVConstants.DEL_REQ)) {     	
         	if (this.key == null)
         		throw new KVException(KVConstants.ERROR_INVALID_FORMAT);
         	Element keyElement = doc.createElement("Key");
@@ -241,6 +258,30 @@ public class KVMessage implements Serializable {
         		kvm.appendChild(valueElement);
         	}
         }
+        else if (msgType.equals(KVConstants.READY)) {
+        }
+        else if (msgType.equals(KVConstants.ABORT)) {
+        	if (message != null) {
+        		Element messageElement = doc.createElement("Message");
+        		messageElement.appendChild(doc.createTextNode(this.message));
+        		kvm.appendChild(messageElement);
+        	}
+        }
+        else if (msgType.equals(KVConstants.COMMIT)) {
+        }
+        else if (msgType.equals(KVConstants.ACK)) {        	
+        }
+        else if (msgType.equals(KVConstants.REGISTER)) {
+        	if (message == null) 
+        		throw new KVException(KVConstants.ERROR_INVALID_FORMAT);
+        	Element messageElement = doc.createElement("Message");
+    		messageElement.appendChild(doc.createTextNode(this.message));
+    		kvm.appendChild(messageElement);
+        }
+        else {
+        	throw new KVException(KVConstants.ERROR_INVALID_FORMAT);
+        }
+        
         String res = null;
         try {
         	res = printDoc(doc);

@@ -2,6 +2,7 @@ package kvstore;
 
 import static kvstore.KVConstants.*;
 
+import java.io.IOException;
 import java.net.Socket;
 /**
  * Implements NetworkHandler to handle 2PC operation requests from the Master/
@@ -55,7 +56,37 @@ public class TPCMasterHandler implements NetworkHandler {
      */
     public void registerWithMaster(String masterHostname, SocketServer server)
             throws KVException {
-        // implement me
+        String regInfo = slaveID + "@" + server.getHostname() + ":" + server.getPort();
+        KVMessage reg = new KVMessage(KVConstants.REGISTER , regInfo);
+        Socket sock = null;
+        
+        try {
+        	sock = new Socket(masterHostname , 9090);
+        }
+        catch (IOException ex) {
+    		throw new KVException(KVConstants.ERROR_COULD_NOT_CONNECT);
+    	}
+    	catch (Exception ex) {
+    		throw new KVException(KVConstants.ERROR_COULD_NOT_CREATE_SOCKET);
+    	}
+        
+        try {
+        	reg.sendMessage(sock);
+        	KVMessage resp = new KVMessage(sock);
+        	if (!resp.getMsgType().equals(KVConstants.RESP) ||
+        		!resp.getMessage().equals("Successfully registered " + regInfo))
+        		throw new KVException(KVConstants.ERROR_INVALID_FORMAT);
+        }
+        catch (Exception ex) {
+        	throw new KVException(KVConstants.ERROR_INVALID_FORMAT);
+        }
+        finally {
+        	try {
+        		sock.close();
+        	}
+        	catch (Exception ex) {        		
+        	}
+        }
     }
 
     /**
@@ -66,7 +97,11 @@ public class TPCMasterHandler implements NetworkHandler {
      */
     @Override
     public void handle(Socket master) {
-        // implement me
+        try {
+        	threadpool.addJob(new MasterHandler(master));
+        }
+        catch (InterruptedException ex) {        	
+        }
     }
 
     /**
@@ -93,7 +128,79 @@ public class TPCMasterHandler implements NetworkHandler {
          */
         @Override
         public void run() {
-            // implement me
+            KVMessage req = null;
+            KVMessage resp = null;
+            
+            try {
+            	req = new KVMessage(master);
+            	
+            	if (req.getMsgType().equals(KVConstants.PUT_REQ)) {
+            		if (req.getKey() == null || req.getKey().length() == 0)
+            			resp = new KVMessage(KVConstants.ABORT , KVConstants.ERROR_INVALID_KEY);
+            		else if (req.getKey().length() > KVServer.MAX_KEY_SIZE)
+            			resp = new KVMessage(KVConstants.ABORT , KVConstants.ERROR_OVERSIZED_KEY);
+            		else if (req.getValue() == null || req.getValue().length() == 0)
+            			resp = new KVMessage(KVConstants.ABORT , KVConstants.ERROR_INVALID_VALUE);
+            		else if (req.getValue().length() > KVServer.MAX_VAL_SIZE)
+            			resp = new KVMessage(KVConstants.ABORT , KVConstants.ERROR_OVERSIZED_VALUE);
+            		else
+            			resp = new KVMessage(KVConstants.READY);
+            	}
+            	else if (req.getMsgType().equals(KVConstants.DEL_REQ)) {
+            		if (req.getKey() == null || req.getKey().length() == 0)
+            			resp = new KVMessage(KVConstants.ABORT , KVConstants.ERROR_INVALID_KEY);
+            		else if (req.getKey().length() > KVServer.MAX_KEY_SIZE)
+            			resp = new KVMessage(KVConstants.ABORT , KVConstants.ERROR_OVERSIZED_KEY);
+            		else if (!kvServer.hasKey(req.getKey()))
+            			resp = new KVMessage(KVConstants.ABORT , KVConstants.ERROR_NO_SUCH_KEY);
+            		else
+            			resp = new KVMessage(KVConstants.READY);
+            	}
+            	else if (req.getMsgType().equals(KVConstants.GET_REQ)) {
+            		if (req.getKey() == null || req.getKey().length() == 0)
+            			resp = new KVMessage(KVConstants.RESP , KVConstants.ERROR_INVALID_KEY);
+            		else if (req.getKey().length() > KVServer.MAX_KEY_SIZE)
+            			resp = new KVMessage(KVConstants.RESP , KVConstants.ERROR_OVERSIZED_KEY);
+            		else if (!kvServer.hasKey(req.getKey()))
+            			resp = new KVMessage(KVConstants.RESP , KVConstants.ERROR_NO_SUCH_KEY);
+            		else {
+            			String value = kvServer.get(req.getKey());
+            			resp = new KVMessage(KVConstants.RESP);
+            			resp.setKey(req.getKey());
+            			resp.setValue(value);
+            		}
+            	}
+            	else if (req.getMsgType().equals(KVConstants.COMMIT)) {
+            		resp = new KVMessage(KVConstants.ACK);
+            		
+            		KVMessage lastMsg = tpcLog.getLastEntry();
+            		
+            		if (lastMsg.getMsgType().equals(KVConstants.PUT_REQ)) {
+            			kvServer.put(lastMsg.getKey() , lastMsg.getValue());
+            		}
+            		else if (lastMsg.getMsgType().equals(KVConstants.DEL_REQ)) {
+            			kvServer.del(lastMsg.getKey());
+            		}
+            	}
+            	else if (req.getMsgType().equals(KVConstants.ABORT)) {
+            		resp = new KVMessage(KVConstants.ACK);
+            	}
+            	else {
+            		return;
+            	}
+            }
+            catch (Exception ex) {
+            	return;
+            }
+            
+            tpcLog.appendAndFlush(req);
+            if (resp != null) {
+            	try {
+            		resp.sendMessage(master);
+            	}
+            	catch (Exception ex) {            		
+            	}
+            }
         }
 
     }

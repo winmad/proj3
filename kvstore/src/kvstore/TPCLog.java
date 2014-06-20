@@ -106,7 +106,19 @@ public class TPCLog {
      * @throws KVException if an error occurs in KVServer (though we expect none)
      */
     public void rebuildServer() throws KVException {
-        // implement me
+        loadFromDisk();
+        KVMessage op = null;
+        for (KVMessage entry : entries) {
+        	if (entry.getMsgType().equals(KVConstants.COMMIT)) {
+        		if (op != null && op.getMsgType().equals(KVConstants.PUT_REQ)) {
+        			kvServer.put(op.getKey() , op.getValue());
+        		}
+        		else if (op != null && op.getMsgType().equals(KVConstants.DEL_REQ)) {
+        			kvServer.del(op.getKey());
+        		}
+        	}
+        	op = entry; 
+        }
     }
 
 }

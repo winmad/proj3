@@ -30,7 +30,8 @@ public class TPCClientHandler implements NetworkHandler {
      * @param connections number of threads in threadPool to service requests
      */
     public TPCClientHandler(TPCMaster tpcMaster, int connections) {
-        // implement me
+        this.tpcMaster = tpcMaster;
+        this.threadPool = new ThreadPool(connections);
     }
 
     /**
@@ -41,7 +42,11 @@ public class TPCClientHandler implements NetworkHandler {
      */
     @Override
     public void handle(Socket client) {
-        // implement me
+        try {
+        	threadPool.addJob(new ClientHandler(client));
+        }
+        catch (InterruptedException ex) {        	
+        }
     }
 
     /**
@@ -67,8 +72,39 @@ public class TPCClientHandler implements NetworkHandler {
          */
         @Override
         public void run() {
-            // implement me
+        	KVMessage req = null;
+            KVMessage resp = null;
+            
+            try {
+            	req = new KVMessage(client);
+            	if (req.getMsgType().equals(KVConstants.PUT_REQ)) {
+            		tpcMaster.handleTPCRequest(req , true);
+            		resp = new KVMessage(KVConstants.RESP , KVConstants.SUCCESS);
+            	}
+            	else if (req.getMsgType().equals(KVConstants.GET_REQ)) {
+            		String value = tpcMaster.handleGet(req);
+            		resp = new KVMessage(KVConstants.RESP);
+            		resp.setKey(req.getKey());
+            		resp.setValue(value);
+            	}
+            	else if (req.getMsgType().equals(KVConstants.DEL_REQ)) {
+            		tpcMaster.handleTPCRequest(req , false);
+            		resp = new KVMessage(KVConstants.RESP , KVConstants.SUCCESS);
+            	}
+            }
+            catch (KVException ex) {
+            	resp = ex.getKVMessage();
+            }
+            
+            if (resp != null) {
+            	try {
+            		resp.sendMessage(client);
+            	}
+            	catch (KVException ex) {
+            	}
+            }
         }
+        
     }
 
 }

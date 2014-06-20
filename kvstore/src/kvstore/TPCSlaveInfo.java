@@ -22,7 +22,20 @@ public class TPCSlaveInfo {
      * @throws KVException ERROR_INVALID_FORMAT if info string is invalid
      */
     public TPCSlaveInfo(String info) throws KVException {
-        // implement me
+        if (info == null || !info.contains("@") || !info.contains(":"))
+        	throw new KVException(KVConstants.ERROR_INVALID_FORMAT);
+        
+        int p1 = info.indexOf('@');
+        int p2 = info.indexOf(':');
+        
+        try {
+        	slaveID = Long.parseLong(info.substring(0, p1));
+        	hostname = info.substring(p1 + 1 , p2);
+        	port = Integer.parseInt(info.substring(p2 + 1 , info.length()));
+        }
+        catch (NumberFormatException ex) {
+        	throw new KVException(KVConstants.ERROR_INVALID_FORMAT);
+        }
     }
 
     public long getSlaveID() {
@@ -45,8 +58,22 @@ public class TPCSlaveInfo {
      *         or ERROR_COULD_NOT_CONNECT
      */
     public Socket connectHost(int timeout) throws KVException {
-        // implement me
-        return null;
+        Socket sock = null;
+        
+        try {
+        	sock = new Socket();
+        	sock.connect(new InetSocketAddress(hostname , port) , timeout);
+        }
+        catch (SocketTimeoutException ex) {
+        	throw new KVException(KVConstants.ERROR_SOCKET_TIMEOUT);
+        }
+        catch (IOException ex) {
+        	throw new KVException(KVConstants.ERROR_COULD_NOT_CONNECT);
+        }
+        catch (Exception ex) {
+        	throw new KVException(KVConstants.ERROR_COULD_NOT_CREATE_SOCKET);
+        }
+        return sock;
     }
 
     /**
@@ -56,6 +83,10 @@ public class TPCSlaveInfo {
      * @param sock Socket to be closed
      */
     public void closeHost(Socket sock) {
-        // implement me
+    	try {
+        	sock.close();
+        }
+        catch (Exception ex) {
+        }
     }
 }

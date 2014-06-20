@@ -15,8 +15,8 @@ public class KVServer implements KeyValueInterface {
     private KVStore dataStore;
     private KVCache dataCache;
 
-    private static final int MAX_KEY_SIZE = 256;
-    private static final int MAX_VAL_SIZE = 256 * 1024;
+    public static final int MAX_KEY_SIZE = 256;
+    public static final int MAX_VAL_SIZE = 256 * 1024;
 
     /**
      * Constructs a KVServer backed by a KVCache and KVStore.

@@ -93,7 +93,7 @@ public class ServerClientHandler implements NetworkHandler {
             	}
             }
             catch (KVException ex) {
-            	resp = ex.getKVMessage();
+            	resp = new KVMessage(KVConstants.RESP , ex.getKVMessage().getMessage());
             }
             
             if (resp != null) {

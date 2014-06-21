@@ -81,14 +81,12 @@ public class KVClient implements KeyValueInterface {
         	kvm.sendMessage(sock);
         	
         	KVMessage receive = new KVMessage(sock);
-        	//if (receive.getMessage() != KVConstants.SUCCESS)
-        	//	throw new KVException(receive);
+        	if (!receive.getMessage().equals(KVConstants.SUCCESS))
+        		throw new KVException(receive.getMessage());
         }
-        /*
-        catch (Exception ex) {
-        	throw new KVException("unknown");
+        catch (KVException ex) {
+        	throw ex;
         }
-        */
         finally {
         	if (sock != null)
         		closeHost(sock);
@@ -111,22 +109,21 @@ public class KVClient implements KeyValueInterface {
         kvm.setKey(key);
         
         Socket sock = null;
-        String value;
+        String value = null;
         
         try {
         	sock = connectHost();
         	kvm.sendMessage(sock);
         	
         	KVMessage receive = new KVMessage(sock);
-        	//if (receive.getKey() == null || receive.getValue() == null)
-        	//	throw new KVException(receive);
+        	
+        	if (receive.getKey() == null || receive.getValue() == null)
+        		throw new KVException(receive.getMessage());
         	value = receive.getValue();
         }
-        /*
-        catch (Exception ex) {
-        	throw new KVException("unknown");
+        catch (KVException ex) {
+        	throw ex;
         }
-        */
         finally {
         	if (sock != null)
         		closeHost(sock);
@@ -155,14 +152,12 @@ public class KVClient implements KeyValueInterface {
         	kvm.sendMessage(sock);
         	
         	KVMessage receive = new KVMessage(sock);
-        	//if (receive.getMessage() != KVConstants.SUCCESS)
-        	//	throw new KVException(receive);
+        	if (!receive.getMessage().equals(KVConstants.SUCCESS))
+        		throw new KVException(receive.getMessage());
         }
-        /*
-        catch (Exception ex) {
-        	throw new KVException("unknown");
+        catch (KVException ex) {
+        	throw ex;
         }
-        */
         finally {
         	if (sock != null)
         		closeHost(sock);

@@ -50,6 +50,79 @@ public class TPCEndToEndTest extends TPCEndToEndTemplate {
     }
     
     @Test(timeout = 60000)
+    public void testConcurrentRequest() throws KVException {
+    	client.put(KEY3 , "2333");
+    	assertEquals(client.get(KEY3) , "2333");
+    	
+    	Thread thread1 = new Thread(
+    			new Runnable() {
+    				public void run() {
+    					try {
+    						client.put(KEY3 , "2333333");
+    					}
+    					catch (KVException ex) {
+    						fail("failed when update KEY3");
+    					}
+    					
+    					try {
+    						Thread.sleep(5000);
+    					}
+    					catch (InterruptedException ex) {    						
+    					}
+    					
+    					try {
+    						assertEquals(client.get(KEY3) , "x");
+    					}
+    					catch (KVException ex) {
+    						fail("failed when get KEY3");
+    					}
+    				}
+    			});
+    	
+    	Thread thread2 = new Thread(
+    			new Runnable() {
+    				public void run() {
+    					try {
+    						Thread.sleep(100);
+    					}
+    					catch (InterruptedException ex) {    						
+    					}
+    					
+    					try {
+    						assertEquals(client.get(KEY3) , "2333333");
+    					}
+    					catch (KVException ex) {
+    						fail("failed when get KEY3");
+    					}
+    					
+    					try {
+    						client.put(KEY3 , "x");
+    					}
+    					catch (KVException ex) {
+    						fail("failed when update KEY3");
+    					}
+    				}
+    			});
+    	
+    	thread1.start();
+        thread2.start();
+        
+        try {
+			Thread.sleep(300);
+		} 
+        catch (InterruptedException ex) {
+		}
+        
+        while(thread1.isAlive() || thread2.isAlive()) {
+        	try {
+				Thread.sleep(1000);
+			} 
+        	catch (InterruptedException ex) {
+			}
+        }
+    }
+    
+    @Test(timeout = 60000)
     public void testSingleSlaveCrash() throws KVException {
         client.put(KEY1 , "1");
         assertEquals(client.get(KEY1) , "1");

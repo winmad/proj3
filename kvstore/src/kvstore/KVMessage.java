@@ -61,7 +61,7 @@ public class KVMessage implements Serializable {
      *         KVConstants.java for possible KVException messages.
      */
     public KVMessage(Socket sock) throws KVException {
-        this(sock, 0);
+        this(sock, KVConstants.TIMEOUT_MILLISECONDS);
     }
 
     /**

@@ -62,7 +62,8 @@ public class TPCSlaveInfo {
         
         try {
         	sock = new Socket();
-        	sock.connect(new InetSocketAddress(hostname , port) , timeout);
+        	sock.setSoTimeout(timeout);
+        	sock.connect(new InetSocketAddress(hostname , port) , KVConstants.TIMEOUT_MILLISECONDS);
         }
         catch (SocketTimeoutException ex) {
         	throw new KVException(KVConstants.ERROR_SOCKET_TIMEOUT);

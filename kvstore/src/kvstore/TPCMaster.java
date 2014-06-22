@@ -4,7 +4,9 @@ import static kvstore.KVConstants.*;
 
 import java.net.Socket;
 import java.util.*;
+import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class TPCMaster {
 
@@ -12,8 +14,10 @@ public class TPCMaster {
     private KVCache masterCache;
 
     public LinkedList<TPCSlaveInfo> slaves;
+    private ReentrantLock lock;
+    private Condition enoughSlaves;
     
-    public static final int TIMEOUT = 3000;
+    public static final int TIMEOUT = 2000;
     public static final int BLOCK_TIME = 500;
 
     /**
@@ -27,6 +31,9 @@ public class TPCMaster {
         this.masterCache = cache;
         
         slaves = new LinkedList<TPCSlaveInfo>();
+        
+        lock = new ReentrantLock();
+        enoughSlaves = lock.newCondition();
     }
 
     /**
@@ -37,25 +44,29 @@ public class TPCMaster {
      * @param slave the slaveInfo to be registered
      */
     public void registerSlave(TPCSlaveInfo slave) {
+    	lock.lock();
         synchronized(slaves) {
         	for (int i = 0; i < slaves.size(); i++) {
         		if (slaves.get(i).getSlaveID() == slave.getSlaveID()) {
         			slaves.set(i , slave);
-        			return;
+        			break;
         		}
         		
         		if (isLessThanUnsigned(slave.getSlaveID() , slaves.get(i).getSlaveID())) {
         			if (slaves.size() == numSlaves)
-        				return;
+        				break;
         			slaves.add(i , slave);
-        			return;
+        			break;
         		}
         	}
         	
+        	if (slaves.size() < numSlaves)
+        		slaves.add(slave);
+        	
         	if (slaves.size() == numSlaves)
-        		return;
-        	slaves.add(slave);
+        		enoughSlaves.signalAll();
         }
+        lock.unlock();
     }
 
     /**
@@ -153,11 +164,15 @@ public class TPCMaster {
     public synchronized void handleTPCRequest(KVMessage msg, boolean isPutReq)
             throws KVException {
     	// wait until all slaves register before servicing any requests
-        while (slaves.size() < numSlaves) {
+        if (slaves.size() < numSlaves) {
+        	lock.lock();
         	try {
-        		Thread.sleep(BLOCK_TIME);
+        		enoughSlaves.await();
         	}
         	catch (Exception ex) {        		
+        	}
+        	finally {
+        		lock.unlock();
         	}
         }
         
@@ -275,11 +290,15 @@ public class TPCMaster {
      */
     public String handleGet(KVMessage msg) throws KVException {
     	// wait until all slaves register before servicing any requests
-    	while (slaves.size() < numSlaves) {
+    	if (slaves.size() < numSlaves) {
+        	lock.lock();
         	try {
-        		Thread.sleep(BLOCK_TIME);
+        		enoughSlaves.await();
         	}
         	catch (Exception ex) {        		
+        	}
+        	finally {
+        		lock.unlock();
         	}
         }
     	

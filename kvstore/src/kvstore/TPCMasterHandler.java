@@ -82,7 +82,8 @@ public class TPCMasterHandler implements NetworkHandler {
         }
         finally {
         	try {
-        		sock.close();
+        		if (sock != null)
+        			sock.close();
         	}
         	catch (Exception ex) {        		
         	}
@@ -184,9 +185,6 @@ public class TPCMasterHandler implements NetworkHandler {
             	}
             	else if (req.getMsgType().equals(KVConstants.ABORT)) {
             		resp = new KVMessage(KVConstants.ACK);
-            	}
-            	else {
-            		return;
             	}
             }
             catch (Exception ex) {

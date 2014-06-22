@@ -103,7 +103,7 @@ public class TPCMaster {
     	assert(slaves.size() >= 2);
     	int N = slaves.size() - 1;
     	if (isLessThanEqualUnsigned(val , slaves.get(0).getSlaveID()) ||
-    		!isLessThanEqualUnsigned(val , slaves.get(N - 1).getSlaveID()))
+    		!isLessThanEqualUnsigned(val , slaves.get(N).getSlaveID()))
     		return 0;
     	
     	int l = 0 , r = N , mid;

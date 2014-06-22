@@ -7,6 +7,14 @@ import org.junit.Test;
 
 public class TPCEndToEndTest extends TPCEndToEndTemplate {
 	
+	@Test(timeout = 15000)
+	public void testFirstReplica() throws KVException {
+		assertEquals(master.findFirstReplicaIndex(4611686018427387903L) , 0);
+		assertEquals(master.findFirstReplicaIndex(4611686018427387904L) , 1);
+		assertEquals(master.findFirstReplicaIndex(-4611686018427387902L) , 3);
+	}
+	
+	
     @Test(timeout = 15000)
     public void testPutGet() throws KVException {
         client.put("foo", "bar");
